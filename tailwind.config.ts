@@ -52,16 +52,18 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
-				sidebar: {
-					DEFAULT: 'hsl(var(--sidebar-background))',
-					foreground: 'hsl(var(--sidebar-foreground))',
-					primary: 'hsl(var(--sidebar-primary))',
-					'primary-foreground': 'hsl(var(--sidebar-primary-foreground))',
-					accent: 'hsl(var(--sidebar-accent))',
-					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
-					border: 'hsl(var(--sidebar-border))',
-					ring: 'hsl(var(--sidebar-ring))'
-				}
+				// Design tool specific colors
+				canvas: 'hsl(var(--canvas))',
+				'canvas-grid': 'hsl(var(--canvas-grid))',
+				'tool-active': 'hsl(var(--tool-active))',
+				'tool-hover': 'hsl(var(--tool-hover))',
+				'collaborator-1': 'hsl(var(--collaborator-1))',
+				'collaborator-2': 'hsl(var(--collaborator-2))',
+				'collaborator-3': 'hsl(var(--collaborator-3))'
+			},
+			boxShadow: {
+				panel: 'var(--shadow-panel)',
+				toolbar: 'var(--shadow-toolbar)'
 			},
 			borderRadius: {
 				lg: 'var(--radius)',

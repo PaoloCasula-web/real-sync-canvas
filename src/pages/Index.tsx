@@ -1,11 +1,29 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import React from 'react';
+import { TopBar } from '@/components/TopBar';
+import { DesignToolbar } from '@/components/DesignToolbar';
+import { LeftSidebar } from '@/components/LeftSidebar';
+import { RightSidebar } from '@/components/RightSidebar';
+import { CanvasArea } from '@/components/CanvasArea';
 
 const Index = () => {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
+    <div className="h-screen bg-background text-foreground flex flex-col overflow-hidden">
+      {/* Top Navigation Bar */}
+      <TopBar />
+      
+      {/* Design Toolbar */}
+      <DesignToolbar />
+      
+      {/* Main Content Area */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Left Sidebar - Files & Layers */}
+        <LeftSidebar />
+        
+        {/* Canvas Area */}
+        <CanvasArea />
+        
+        {/* Right Sidebar - Properties */}
+        <RightSidebar />
       </div>
     </div>
   );
