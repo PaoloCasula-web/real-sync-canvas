@@ -32,8 +32,15 @@ const zoomControls = [
   { id: 'zoom-in', icon: ZoomIn, name: 'Zoom In' },
 ];
 
-export function DesignToolbar() {
-  const [activeTool, setActiveTool] = useState('select');
+interface DesignToolbarProps {
+  activeTool: string;
+  onToolChange: (tool: string) => void;
+  onZoom: (direction: 'in' | 'out') => void;
+  onUndo: () => void;
+  onRedo: () => void;
+}
+
+export function DesignToolbar({ activeTool, onToolChange, onZoom, onUndo, onRedo }: DesignToolbarProps) {
 
   return (
     <div className="h-12 bg-card border-b border-border flex items-center px-4 gap-2 shadow-toolbar">
@@ -48,7 +55,7 @@ export function DesignToolbar() {
                 "w-8 h-8 p-0 hover:bg-tool-hover transition-colors",
                 activeTool === tool.id && "bg-tool-active text-accent-foreground"
               )}
-              onClick={() => setActiveTool(tool.id)}
+              onClick={() => onToolChange(tool.id)}
               title={tool.name}
             >
               <tool.icon className="w-4 h-4" />
@@ -68,6 +75,7 @@ export function DesignToolbar() {
             variant="ghost"
             size="sm"
             className="w-8 h-8 p-0 hover:bg-tool-hover transition-colors"
+            onClick={() => onZoom(control.id === 'zoom-in' ? 'in' : 'out')}
             title={control.name}
           >
             <control.icon className="w-4 h-4" />
@@ -84,6 +92,7 @@ export function DesignToolbar() {
           variant="ghost"
           size="sm"
           className="w-8 h-8 p-0 hover:bg-tool-hover transition-colors"
+          onClick={onUndo}
           title="Undo"
         >
           <RotateCcw className="w-4 h-4" />
@@ -92,6 +101,7 @@ export function DesignToolbar() {
           variant="ghost"
           size="sm"
           className="w-8 h-8 p-0 hover:bg-tool-hover transition-colors"
+          onClick={onRedo}
           title="Redo"
         >
           <RotateCw className="w-4 h-4" />

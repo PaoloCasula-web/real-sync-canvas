@@ -1,25 +1,128 @@
 import React, { useRef, useEffect, useState } from 'react';
+import { Canvas as FabricCanvas, Circle, Rect, FabricText, PencilBrush, Point } from 'fabric';
 import { cn } from '@/lib/utils';
 
-export function CanvasArea() {
-  const canvasRef = useRef<HTMLDivElement>(null);
+interface CanvasAreaProps {
+  activeTool?: string;
+  activeColor?: string;
+}
+
+export function CanvasArea({ activeTool = 'select', activeColor = '#6366f1' }: CanvasAreaProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [fabricCanvas, setFabricCanvas] = useState<FabricCanvas | null>(null);
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+
+  // Initialize Fabric.js canvas
+  useEffect(() => {
+    if (!canvasRef.current) return;
+
+    const canvas = new FabricCanvas(canvasRef.current, {
+      width: 1200,
+      height: 800,
+      backgroundColor: 'hsl(var(--canvas))',
+      selection: activeTool === 'select',
+    });
+
+    // Initialize drawing brush
+    canvas.freeDrawingBrush = new PencilBrush(canvas);
+    canvas.freeDrawingBrush.color = activeColor;
+    canvas.freeDrawingBrush.width = 2;
+
+    // Add sample objects
+    const sampleRect = new Rect({
+      left: 100,
+      top: 100,
+      fill: 'hsl(var(--primary))',
+      width: 200,
+      height: 120,
+      rx: 8,
+      ry: 8,
+    });
+
+    const sampleCircle = new Circle({
+      left: 350,
+      top: 100,
+      fill: 'hsl(var(--accent))',
+      radius: 60,
+    });
+
+    const sampleText = new FabricText('Sample Text', {
+      left: 100,
+      top: 250,
+      fontFamily: 'Inter, sans-serif',
+      fontSize: 24,
+      fill: 'hsl(var(--foreground))',
+    });
+
+    canvas.add(sampleRect, sampleCircle, sampleText);
+    setFabricCanvas(canvas);
+
+    return () => {
+      canvas.dispose();
+    };
+  }, []);
+
+  // Handle tool changes
+  useEffect(() => {
+    if (!fabricCanvas) return;
+
+    fabricCanvas.isDrawingMode = activeTool === 'pen';
+    fabricCanvas.selection = activeTool === 'select';
+    
+    if (activeTool === 'pen' && fabricCanvas.freeDrawingBrush) {
+      fabricCanvas.freeDrawingBrush.color = activeColor;
+      fabricCanvas.freeDrawingBrush.width = 2;
+    }
+
+    // Handle shape creation
+    if (activeTool === 'rectangle') {
+      const rect = new Rect({
+        left: 200 + Math.random() * 200,
+        top: 200 + Math.random() * 200,
+        fill: activeColor,
+        width: 100,
+        height: 80,
+        rx: 4,
+        ry: 4,
+      });
+      fabricCanvas.add(rect);
+    } else if (activeTool === 'ellipse') {
+      const circle = new Circle({
+        left: 200 + Math.random() * 200,
+        top: 200 + Math.random() * 200,
+        fill: activeColor,
+        radius: 50,
+      });
+      fabricCanvas.add(circle);
+    } else if (activeTool === 'text') {
+      const text = new FabricText('New Text', {
+        left: 200 + Math.random() * 200,
+        top: 200 + Math.random() * 200,
+        fontFamily: 'Inter, sans-serif',
+        fontSize: 18,
+        fill: activeColor,
+      });
+      fabricCanvas.add(text);
+    }
+  }, [activeTool, activeColor, fabricCanvas]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.button === 1 || (e.button === 0 && e.metaKey)) { // Middle click or Cmd+click
+    if (activeTool === 'hand' || e.button === 1 || (e.button === 0 && e.metaKey)) {
       setIsPanning(true);
       setPanStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
     }
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (isPanning) {
-      setPanOffset({
-        x: e.clientX - panStart.x,
-        y: e.clientY - panStart.y,
-      });
+    if (isPanning && fabricCanvas) {
+      const deltaX = e.clientX - panStart.x;
+      const deltaY = e.clientY - panStart.y;
+      setPanOffset({ x: deltaX, y: deltaY });
+      
+      fabricCanvas.relativePan(new Point(deltaX - panOffset.x, deltaY - panOffset.y));
     }
   };
 
@@ -27,247 +130,73 @@ export function CanvasArea() {
     setIsPanning(false);
   };
 
+  const handleWheel = (e: React.WheelEvent) => {
+    if (!fabricCanvas) return;
+    
+    e.preventDefault();
+    const delta = e.deltaY;
+    let newZoom = fabricCanvas.getZoom();
+    newZoom *= 0.999 ** delta;
+    
+    if (newZoom > 20) newZoom = 20;
+    if (newZoom < 0.01) newZoom = 0.01;
+    
+    setZoom(newZoom);
+    fabricCanvas.zoomToPoint(new Point(e.nativeEvent.offsetX, e.nativeEvent.offsetY), newZoom);
+  };
+
   return (
     <div 
-      className="flex-1 bg-canvas overflow-hidden relative cursor-default select-none"
+      className="flex-1 bg-canvas overflow-hidden relative select-none"
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
+      onWheel={handleWheel}
     >
       {/* Grid Pattern */}
       <div 
-        className="absolute inset-0 opacity-30"
+        className="absolute inset-0 opacity-20 pointer-events-none"
         style={{
           backgroundImage: `
             linear-gradient(hsl(var(--canvas-grid)) 1px, transparent 1px),
             linear-gradient(90deg, hsl(var(--canvas-grid)) 1px, transparent 1px)
           `,
-          backgroundSize: '20px 20px',
-          transform: `translate(${panOffset.x % 20}px, ${panOffset.y % 20}px)`
+          backgroundSize: `${20 * zoom}px ${20 * zoom}px`,
+          transform: `translate(${panOffset.x % (20 * zoom)}px, ${panOffset.y % (20 * zoom)}px)`
         }}
       />
 
-      {/* Canvas Content */}
-      <div 
-        ref={canvasRef}
-        className="absolute inset-0 w-full h-full"
-        style={{
-          transform: `translate(${panOffset.x}px, ${panOffset.y}px)`
-        }}
-      >
-        {/* Sample Frames */}
-        <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
-          {/* Main Desktop Frame */}
-          <div className="bg-background border-2 border-primary rounded-lg shadow-lg relative group">
-            <div className="w-96 h-64 p-6">
-              <div className="text-lg font-semibold mb-4 text-foreground">Landing Page</div>
-              
-              {/* Header */}
-              <div className="bg-secondary rounded p-3 mb-3">
-                <div className="flex items-center justify-between">
-                  <div className="w-16 h-4 bg-primary rounded"></div>
-                  <div className="flex gap-2">
-                    <div className="w-12 h-3 bg-muted rounded"></div>
-                    <div className="w-12 h-3 bg-muted rounded"></div>
-                    <div className="w-12 h-3 bg-muted rounded"></div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Hero Section */}
-              <div className="bg-card rounded p-4 mb-3">
-                <div className="w-32 h-4 bg-foreground rounded mb-2"></div>
-                <div className="w-24 h-3 bg-muted rounded mb-3"></div>
-                <div className="w-20 h-6 bg-primary rounded"></div>
-              </div>
-
-              {/* Content Cards */}
-              <div className="flex gap-2">
-                <div className="flex-1 bg-secondary rounded p-2">
-                  <div className="w-full h-2 bg-muted rounded mb-1"></div>
-                  <div className="w-3/4 h-2 bg-muted rounded"></div>
-                </div>
-                <div className="flex-1 bg-secondary rounded p-2">
-                  <div className="w-full h-2 bg-muted rounded mb-1"></div>
-                  <div className="w-3/4 h-2 bg-muted rounded"></div>
-                </div>
-              </div>
-            </div>
-
-            {/* Frame Label */}
-            <div className="absolute -top-8 left-0 text-sm font-medium text-foreground bg-card px-2 py-1 rounded border border-border">
-              Desktop - 1440x900
-            </div>
-
-            {/* Selection Handles */}
-            <div className="absolute inset-0 border-2 border-primary rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-              <div className="absolute -top-1 -left-1 w-2 h-2 bg-primary rounded-full"></div>
-              <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-primary rounded-full"></div>
-              <div className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full"></div>
-              <div className="absolute top-1/2 transform -translate-y-1/2 -left-1 w-2 h-2 bg-primary rounded-full"></div>
-              <div className="absolute top-1/2 transform -translate-y-1/2 -right-1 w-2 h-2 bg-primary rounded-full"></div>
-              <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-primary rounded-full"></div>
-              <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-primary rounded-full"></div>
-              <div className="absolute -bottom-1 -right-1 w-2 h-2 bg-primary rounded-full"></div>
-            </div>
-          </div>
-
-          {/* Mobile Frame */}
-          <div className="absolute left-full top-0 ml-12 bg-background border border-border rounded-lg shadow-lg group">
-            <div className="w-48 h-80 p-4">
-              <div className="text-sm font-semibold mb-3 text-foreground">Mobile</div>
-              
-              {/* Mobile Header */}
-              <div className="bg-secondary rounded p-2 mb-2">
-                <div className="flex items-center justify-between">
-                  <div className="w-8 h-2 bg-primary rounded"></div>
-                  <div className="w-4 h-2 bg-muted rounded"></div>
-                </div>
-              </div>
-
-              {/* Mobile Content */}
-              <div className="bg-card rounded p-3 mb-2">
-                <div className="w-20 h-3 bg-foreground rounded mb-2"></div>
-                <div className="w-16 h-2 bg-muted rounded mb-2"></div>
-                <div className="w-12 h-4 bg-primary rounded"></div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="bg-secondary rounded p-2">
-                  <div className="w-full h-2 bg-muted rounded"></div>
-                </div>
-                <div className="bg-secondary rounded p-2">
-                  <div className="w-full h-2 bg-muted rounded"></div>
-                </div>
-              </div>
-            </div>
-
-            {/* Mobile Frame Label */}
-            <div className="absolute -top-8 left-0 text-sm font-medium text-foreground bg-card px-2 py-1 rounded border border-border">
-              iPhone 14 - 390x844
-            </div>
-
-            {/* Mobile Selection Handles */}
-            <div className="absolute inset-0 border-2 border-primary rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-              <div className="absolute -top-1 -left-1 w-2 h-2 bg-primary rounded-full"></div>
-              <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-primary rounded-full"></div>
-              <div className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full"></div>
-              <div className="absolute top-1/2 transform -translate-y-1/2 -left-1 w-2 h-2 bg-primary rounded-full"></div>
-              <div className="absolute top-1/2 transform -translate-y-1/2 -right-1 w-2 h-2 bg-primary rounded-full"></div>
-              <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-primary rounded-full"></div>
-              <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-primary rounded-full"></div>
-              <div className="absolute -bottom-1 -right-1 w-2 h-2 bg-primary rounded-full"></div>
-            </div>
-          </div>
-
-          {/* Tablet Frame */}
-          <div className="absolute left-0 top-full mt-12 bg-background border border-border rounded-lg shadow-lg group">
-            <div className="w-80 h-56 p-4">
-              <div className="text-sm font-semibold mb-3 text-foreground">Tablet</div>
-              
-              {/* Tablet Header */}
-              <div className="bg-secondary rounded p-2 mb-2">
-                <div className="flex items-center justify-between">
-                  <div className="w-12 h-3 bg-primary rounded"></div>
-                  <div className="flex gap-2">
-                    <div className="w-8 h-2 bg-muted rounded"></div>
-                    <div className="w-8 h-2 bg-muted rounded"></div>
-                    <div className="w-8 h-2 bg-muted rounded"></div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Tablet Content */}
-              <div className="bg-card rounded p-3 mb-2">
-                <div className="w-28 h-3 bg-foreground rounded mb-2"></div>
-                <div className="w-20 h-2 bg-muted rounded mb-2"></div>
-                <div className="w-16 h-5 bg-primary rounded"></div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div className="bg-secondary rounded p-2">
-                  <div className="w-full h-2 bg-muted rounded mb-1"></div>
-                  <div className="w-3/4 h-2 bg-muted rounded"></div>
-                </div>
-                <div className="bg-secondary rounded p-2">
-                  <div className="w-full h-2 bg-muted rounded mb-1"></div>
-                  <div className="w-3/4 h-2 bg-muted rounded"></div>
-                </div>
-              </div>
-            </div>
-
-            {/* Tablet Frame Label */}
-            <div className="absolute -top-8 left-0 text-sm font-medium text-foreground bg-card px-2 py-1 rounded border border-border">
-              iPad - 1024x768
-            </div>
-
-            {/* Tablet Selection Handles */}
-            <div className="absolute inset-0 border-2 border-primary rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-              <div className="absolute -top-1 -left-1 w-2 h-2 bg-primary rounded-full"></div>
-              <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-primary rounded-full"></div>  
-              <div className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full"></div>
-              <div className="absolute top-1/2 transform -translate-y-1/2 -left-1 w-2 h-2 bg-primary rounded-full"></div>
-              <div className="absolute top-1/2 transform -translate-y-1/2 -right-1 w-2 h-2 bg-primary rounded-full"></div>
-              <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-primary rounded-full"></div>
-              <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-primary rounded-full"></div>
-              <div className="absolute -bottom-1 -right-1 w-2 h-2 bg-primary rounded-full"></div>
-            </div>
-          </div>
-
-          {/* Component Frame */}
-          <div className="absolute right-0 top-full mt-12 ml-12 bg-background border border-accent rounded-lg shadow-lg group">
-            <div className="w-64 h-32 p-3">
-              <div className="text-sm font-semibold mb-2 text-foreground">Button Component</div>
-              
-              {/* Component Content */}
-              <div className="flex gap-2 mb-2">
-                <div className="bg-primary rounded px-4 py-2">
-                  <div className="w-12 h-2 bg-primary-foreground rounded"></div>
-                </div>
-                <div className="bg-secondary rounded px-4 py-2">
-                  <div className="w-12 h-2 bg-secondary-foreground rounded"></div>
-                </div>
-              </div>
-              
-              <div className="flex gap-2">
-                <div className="border border-border rounded px-3 py-1">
-                  <div className="w-8 h-1 bg-muted rounded"></div>
-                </div>
-                <div className="bg-destructive rounded px-3 py-1">
-                  <div className="w-8 h-1 bg-destructive-foreground rounded"></div>
-                </div>
-              </div>
-            </div>
-
-            {/* Component Frame Label */}
-            <div className="absolute -top-8 left-0 text-sm font-medium text-accent bg-card px-2 py-1 rounded border border-accent">
-              Component Library
-            </div>
-
-            {/* Component Selection Handles */}
-            <div className="absolute inset-0 border-2 border-accent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-              <div className="absolute -top-1 -left-1 w-2 h-2 bg-accent rounded-full"></div>
-              <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-accent rounded-full"></div>
-              <div className="absolute -top-1 -right-1 w-2 h-2 bg-accent rounded-full"></div>
-              <div className="absolute top-1/2 transform -translate-y-1/2 -left-1 w-2 h-2 bg-accent rounded-full"></div>
-              <div className="absolute top-1/2 transform -translate-y-1/2 -right-1 w-2 h-2 bg-accent rounded-full"></div>
-              <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-accent rounded-full"></div>
-              <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-accent rounded-full"></div>
-              <div className="absolute -bottom-1 -right-1 w-2 h-2 bg-accent rounded-full"></div>
-            </div>
-          </div>
-        </div>
+      {/* Fabric.js Canvas */}
+      <div className="absolute inset-0 flex items-center justify-center">
+        <canvas
+          ref={canvasRef}
+          className="border border-border rounded-lg shadow-canvas"
+          style={{
+            cursor: activeTool === 'hand' ? 'grab' : activeTool === 'pen' ? 'crosshair' : 'default'
+          }}
+        />
       </div>
 
       {/* Canvas Controls */}
       <div className="absolute bottom-4 left-4 flex items-center gap-2">
         <div className="bg-card border border-border rounded px-3 py-1 text-sm font-medium text-foreground shadow-lg">
-          100%
+          {Math.round(zoom * 100)}%
         </div>
         <div className="bg-card border border-border rounded px-3 py-1 text-sm text-muted-foreground shadow-lg">
-          {Math.round(-panOffset.x)}, {Math.round(-panOffset.y)}
+          Objects: {fabricCanvas?.getObjects().length || 0}
         </div>
+      </div>
+
+      {/* Tool Instructions */}
+      <div className="absolute top-4 left-4 bg-card border border-border rounded px-3 py-2 text-sm text-muted-foreground shadow-lg max-w-xs">
+        {activeTool === 'select' && 'Click and drag to select objects. Hold Ctrl/Cmd+click to pan.'}
+        {activeTool === 'rectangle' && 'Click to add rectangles to the canvas.'}
+        {activeTool === 'ellipse' && 'Click to add circles to the canvas.'}
+        {activeTool === 'text' && 'Click to add text to the canvas.'}
+        {activeTool === 'pen' && 'Draw freehand on the canvas.'}
+        {activeTool === 'hand' && 'Pan around the canvas by dragging.'}
+        {activeTool === 'frame' && 'Click to create frames for organizing content.'}
       </div>
     </div>
   );
