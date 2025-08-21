@@ -19,9 +19,27 @@ const mockFiles = [
   { id: '1', name: 'Design System', type: 'folder', children: [
     { id: '2', name: 'Components', type: 'file' },
     { id: '3', name: 'Colors', type: 'file' },
+    { id: '4', name: 'Typography', type: 'file' },
+    { id: '5', name: 'Icons', type: 'file' },
   ]},
-  { id: '4', name: 'Landing Page', type: 'file' },
-  { id: '5', name: 'Mobile App', type: 'file' },
+  { id: '6', name: 'Projects', type: 'folder', children: [
+    { id: '7', name: 'Landing Page v1', type: 'file' },
+    { id: '8', name: 'Landing Page v2', type: 'file' },
+    { id: '9', name: 'Dashboard', type: 'file' },
+    { id: '10', name: 'User Profile', type: 'file' },
+  ]},
+  { id: '11', name: 'Mobile Apps', type: 'folder', children: [
+    { id: '12', name: 'iOS App', type: 'file' },
+    { id: '13', name: 'Android App', type: 'file' },
+    { id: '14', name: 'Tablet Version', type: 'file' },
+  ]},
+  { id: '15', name: 'Prototypes', type: 'folder', children: [
+    { id: '16', name: 'User Flow', type: 'file' },
+    { id: '17', name: 'Onboarding', type: 'file' },
+    { id: '18', name: 'Checkout Process', type: 'file' },
+  ]},
+  { id: '19', name: 'Wireframes', type: 'file' },
+  { id: '20', name: 'Brand Guidelines', type: 'file' },
 ];
 
 const mockLayers = [
@@ -29,10 +47,30 @@ const mockLayers = [
   { id: '2', name: 'Navigation', type: 'frame', level: 1 },
   { id: '3', name: 'Logo', type: 'image', level: 2 },
   { id: '4', name: 'Menu Items', type: 'frame', level: 2 },
-  { id: '5', name: 'Hero Section', type: 'frame', level: 0 },
-  { id: '6', name: 'Background', type: 'rectangle', level: 1 },
-  { id: '7', name: 'Headline', type: 'text', level: 1 },
-  { id: '8', name: 'CTA Button', type: 'rectangle', level: 1 },
+  { id: '5', name: 'Home', type: 'text', level: 3 },
+  { id: '6', name: 'About', type: 'text', level: 3 },
+  { id: '7', name: 'Contact', type: 'text', level: 3 },
+  { id: '8', name: 'User Avatar', type: 'circle', level: 2 },
+  { id: '9', name: 'Hero Section', type: 'frame', level: 0 },
+  { id: '10', name: 'Background Gradient', type: 'rectangle', level: 1 },
+  { id: '11', name: 'Hero Content', type: 'frame', level: 1 },
+  { id: '12', name: 'Main Headline', type: 'text', level: 2 },
+  { id: '13', name: 'Subtitle', type: 'text', level: 2 },
+  { id: '14', name: 'CTA Button', type: 'rectangle', level: 2 },
+  { id: '15', name: 'Button Text', type: 'text', level: 3 },
+  { id: '16', name: 'Hero Image', type: 'image', level: 1 },
+  { id: '17', name: 'Features Section', type: 'frame', level: 0 },
+  { id: '18', name: 'Section Title', type: 'text', level: 1 },
+  { id: '19', name: 'Feature Cards', type: 'frame', level: 1 },
+  { id: '20', name: 'Card 1', type: 'frame', level: 2 },
+  { id: '21', name: 'Icon', type: 'image', level: 3 },
+  { id: '22', name: 'Title', type: 'text', level: 3 },
+  { id: '23', name: 'Description', type: 'text', level: 3 },
+  { id: '24', name: 'Card 2', type: 'frame', level: 2 },
+  { id: '25', name: 'Card 3', type: 'frame', level: 2 },
+  { id: '26', name: 'Footer', type: 'frame', level: 0 },
+  { id: '27', name: 'Links', type: 'frame', level: 1 },
+  { id: '28', name: 'Copyright', type: 'text', level: 1 },
 ];
 
 const getLayerIcon = (type: string) => {
@@ -48,7 +86,7 @@ const getLayerIcon = (type: string) => {
 
 export function LeftSidebar() {
   const [activeTab, setActiveTab] = useState<'files' | 'layers'>('files');
-  const [expandedFolders, setExpandedFolders] = useState<string[]>(['1']);
+  const [expandedFolders, setExpandedFolders] = useState<string[]>(['1', '6', '11', '15']);
 
   const toggleFolder = (id: string) => {
     setExpandedFolders(prev => 
